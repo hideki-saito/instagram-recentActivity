@@ -145,7 +145,9 @@ if __name__ == "__main__":
 
     # print (json.dumps(activities, indent=2))
     # target_username = input("Input username you are targeting: ")
-
-    print(json.dumps(activities[target_username], indent=2))
+    try:
+        print(json.dumps(activities[target_username], indent=2))
+    except:
+        print ("There is no recent activity for %s now." % target_username)
 
 # 1499313403
