@@ -103,9 +103,29 @@ class Instagram_DataService():
         self.user_id = self.client.username_info(username)['user']['pk']
 
 
+def get_activities(following_recent_activities_raw):
+    activities = []
+    for activity_raw in following_recent_activities_raw:
+        args = activity_raw['args']
+        username = args['text'].split()[0]
+        if username == target_username:
+            activity = {}
+            # activity['username'] = username
+            activity['activity'] = args['text']
+            activity['time'] = datetime.datetime.fromtimestamp(int(args['timestamp'])).strftime('%Y-%m-%d %H:%M:%S')
+            try:
+                activity['media'] = args['media']
+            except:
+                pass
+
+            activities.append(activity)
+
+    return activities
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print ("Invalid command. ex: python main.pyt [targetUsername]")
+        print ("Invalid command. ex: python main.py [targetUsername]")
         sys.exit()
     else:
         target_username = sys.argv[1]
@@ -124,30 +144,23 @@ if __name__ == "__main__":
     # Generate Instagram_DataService object with above username and password
     service = Instagram_DataService(username, password)
 
-    following_recent_activities_raw = service.client.getFollowingRecentActivity()
-    following_recent_activities = following_recent_activities_raw['stories']
-    logger.info(following_recent_activities_raw)
-
-    activities = {}
-    for activity in following_recent_activities:
-        args = activity['args']
-        username = args['text'].split()[0]
-        activity_properties = {}
-        activity_properties['activity'] = args['text']
+    activities = []
+    next_max_id = None
+    while True:
         try:
-            activity_properties['media'] = args['media']
+            if next_max_id:
+                following_recent_activities_raw = service.client.getFollowingRecentActivity(max_id=next_max_id)
+            else:
+                following_recent_activities_raw = service.client.getFollowingRecentActivity()
+            next_max_id = following_recent_activities_raw['next_max_id']
+            following_recent_activities_raw = following_recent_activities_raw['stories']
+            activities.extend(get_activities(following_recent_activities_raw))
         except:
-            pass
+            break
 
-        activity_properties['time'] = datetime.datetime.fromtimestamp(int(args['timestamp'])).strftime('%Y-%m-%d %H:%M:%S')
-
-        activities[username] = activity_properties
-
-    # print (json.dumps(activities, indent=2))
-    # target_username = input("Input username you are targeting: ")
-    try:
-        print(json.dumps(activities[target_username], indent=2))
-    except:
+    if activities:
+        print(json.dumps(activities, indent=2))
+        print (len(activities))
+    else:
         print ("There is no recent activity for %s now." % target_username)
 
-# 1499313403
